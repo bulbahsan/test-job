@@ -1,0 +1,13 @@
+@import 'bootstrap/dist/css/bootstrap.min.css';
+
+body {
+    padding: 10px;
+}
+
+.navbar-brand {
+    padding-left: 10px;
+}
+
+nav ul li.active a {
+    font-weight: bold;
+}

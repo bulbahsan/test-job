@@ -1,0 +1,110 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: app
+    restart: always
+    tty: true
+    environment:
+      SERVICE_NAME: app
+      SERVICE_TAGS: dev
+    working_dir: /var/www
+    volumes:
+      - ./project:/var/www
+      - ./conf/supervisor.conf:/etc/supervisor/conf.d/laravel.conf
+      - ./conf/laravel-cron:/etc/cron.d/laravel-cron
+      - ./logs/supervisor:/var/log/supervisor
+    depends_on:
+      - db
+      - rabbitmq
+      - redis
+    expose:
+      - "9000"
+    networks:
+      - app-network
+
+  webserver:
+    image: nginx:alpine
+    container_name: webserver
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./project:/var/www
+      - ./conf/nginx.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - app-network
+
+  db:
+    image: mariadb:10.5
+    container_name: db
+    restart: always
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: laravel
+      MARIADB_USER: laravel
+      MARIADB_PASSWORD: laravel
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./db:/var/lib/mysql
+      - ./entrypoint/db:/docker-entrypoint-initdb.d
+    networks:
+      - app-network
+
+  redis:
+    image: redis:alpine
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis:/data
+    networks:
+      - app-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    restart: always
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    networks:
+      - app-network
+
+  phpmyadmin:
+    image: phpmyadmin
+    container_name: phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      - PMA_ARBITRARY=1
+    networks:
+      - app-network
+
+  workspace:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: workspace
+    restart: unless-stopped
+    tty: true
+    environment:
+      SERVICE_NAME: app
+      SERVICE_TAGS: dev
+    working_dir: /var/www
+    volumes:
+      - ./project:/var/www
+      - ./conf/php.ini:/usr/local/etc/php/conf.d/user-php.ini
+    networks:
+      - app-network
+    command: /bin/bash
+
+networks:
+  app-network:
+    driver: bridge

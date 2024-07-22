@@ -1,0 +1,4 @@
+#!/bin/bash
+
+chown -R www-data: /var/www/
+exec supervisord -c /etc/supervisor/supervisord.conf
